@@ -2,22 +2,40 @@ version: '3.8'
 
 services:
   excalidraw-frontend:
-    build: .
+    image: alswl/excalidraw:v0.17.3-fork-b1
     environment:
-      - REACT_APP_BACKEND_V2_GET_URL=http://excalidraw-backend:8080/api/v2/
-      - REACT_APP_BACKEND_V2_POST_URL=http://excalidraw-backend:8080/api/v2/
+      - VITE_APP_BACKEND_V2_GET_URL=https://whiteboard.atakumi.net/api/v2/scenes/
+      - VITE_APP_BACKEND_V2_POST_URL=https://whiteboard.atakumi.net/api/v2/scenes/
+      - VITE_APP_WS_SERVER_URL=https://whiteboard.atakumi.net/
+      - VITE_APP_HTTP_STORAGE_BACKEND_URL=https://whiteboard.atakumi.net/api/v2
+      - VITE_APP_STORAGE_BACKEND=http
+      - VITE_APP_FIREBASE_CONFIG={}
+      - VITE_APP_DISABLE_TRACKING=true
     depends_on:
-      excalidraw-backend:
-        condition: service_healthy
+      - excalidraw-storage
+      - excalidraw-room
 
-  excalidraw-backend:
-    image: excalidraw/excalidraw-room:latest
+  excalidraw-storage:
+    image: alswl/excalidraw-storage-backend:v2023.11.11
     environment:
       - PORT=8080
     expose:
       - "8080"
     healthcheck:
-      test: ["CMD-SHELL", "nc -z localhost 8080"]
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  excalidraw-room:
+    image: excalidraw/excalidraw-room:sha-49bf529
+    environment:
+      - PORT=8081
+    expose:
+      - "8081"
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 8081 || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
