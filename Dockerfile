@@ -4,24 +4,33 @@ FROM node:18-alpine AS builder
 # Set working directory
 WORKDIR /opt/node_app
 
+# Install git and other dependencies
+RUN apk add --no-cache git python3 make g++
+
 # Clone Excalidraw source
-RUN apk add --no-cache git
 RUN git clone https://github.com/excalidraw/excalidraw.git .
 
 # Install dependencies
 RUN yarn install --frozen-lockfile --network-timeout 600000
 
-# Build with custom environment variables
-ENV REACT_APP_WS_SERVER_URL=wss://excalidraw.atakumi.net
-ENV REACT_APP_SOCKET_SERVER_URL=wss://excalidraw.atakumi.net
+# Set environment variables for build
+ENV NODE_ENV=production
+ENV REACT_APP_WS_SERVER_URL=wss://whiteboard.atakumi.net
+ENV REACT_APP_SOCKET_SERVER_URL=wss://whiteboard.atakumi.net
 
-RUN yarn build:app
+# Build the application
+RUN yarn build
 
 # Production stage
 FROM nginx:alpine
-COPY --from=builder /opt/node_app/build /usr/share/nginx/html
 
-# Custom nginx config for WebSocket support
+# Copy built files (check both possible locations)
+COPY --from=builder /opt/node_app/dist /usr/share/nginx/html
+
+# If dist doesn't exist, let's also try build directory as fallback
+# COPY --from=builder /opt/node_app/build /usr/share/nginx/html
+
+# Create nginx config
 RUN echo 'server { \
     listen 80; \
     server_name localhost; \
