@@ -3,8 +3,8 @@ version: '3.8'
 services:
   excalidraw-frontend:
     image: alswl/excalidraw:v0.17.3-fork-b1
-    ports:
-      - "80:80"
+    expose:
+      - "80"
     environment:
       # Use internal container names for backend communication
       - VITE_APP_BACKEND_V2_GET_URL=https://whiteboard.atakumi.net/api/v2/scenes/
