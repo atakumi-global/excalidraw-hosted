@@ -21,21 +21,46 @@ ENV REACT_APP_SOCKET_SERVER_URL=wss://whiteboard.atakumi.net
 # Build the application
 RUN yarn build
 
-# Find and move the build output to a standard location
-RUN mkdir -p /build-output && \
-    find /opt/node_app -name "index.html" -type f -exec dirname {} \; | head -1 | xargs -I {} cp -r {}/* /build-output/ || \
-    find /opt/node_app -type d -name "build" -exec cp -r {}/* /build-output/ \; || \
-    find /opt/node_app -type d -name "dist" -exec cp -r {}/* /build-output/ \; || \
-    echo "Build output not found"
+# Debug: Show the entire directory structure
+RUN echo "=== Full directory structure ===" && \
+    find /opt/node_app -type f -name "*.html" && \
+    echo "=== All directories ===" && \
+    find /opt/node_app -type d -maxdepth 3
 
-# List what we found
-RUN ls -la /build-output/
+# Find and copy build output more reliably
+RUN mkdir -p /build-output && \
+    if [ -d "/opt/node_app/build" ]; then \
+        echo "Found /opt/node_app/build" && cp -r /opt/node_app/build/* /build-output/; \
+    elif [ -d "/opt/node_app/dist" ]; then \
+        echo "Found /opt/node_app/dist" && cp -r /opt/node_app/dist/* /build-output/; \
+    elif [ -d "/opt/node_app/packages/excalidraw/build" ]; then \
+        echo "Found /opt/node_app/packages/excalidraw/build" && cp -r /opt/node_app/packages/excalidraw/build/* /build-output/; \
+    elif [ -d "/opt/node_app/packages/excalidraw/dist" ]; then \
+        echo "Found /opt/node_app/packages/excalidraw/dist" && cp -r /opt/node_app/packages/excalidraw/dist/* /build-output/; \
+    else \
+        echo "No standard build directory found, searching for index.html..." && \
+        BUILD_DIR=$(find /opt/node_app -name "index.html" -type f | head -1 | xargs dirname) && \
+        if [ ! -z "$BUILD_DIR" ]; then \
+            echo "Found build files in: $BUILD_DIR" && cp -r $BUILD_DIR/* /build-output/; \
+        else \
+            echo "ERROR: No build output found!" && exit 1; \
+        fi \
+    fi
+
+# Verify we have files
+RUN echo "=== Build output contents ===" && ls -la /build-output/
 
 # Production stage
 FROM nginx:alpine
 
-# Copy built files from standardized location
+# Remove default nginx files
+RUN rm -rf /usr/share/nginx/html/*
+
+# Copy built files
 COPY --from=builder /build-output /usr/share/nginx/html
+
+# Verify files were copied
+RUN echo "=== Nginx html directory ===" && ls -la /usr/share/nginx/html/
 
 # Create nginx config
 RUN echo 'server { \
