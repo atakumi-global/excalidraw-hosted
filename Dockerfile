@@ -21,14 +21,21 @@ ENV REACT_APP_SOCKET_SERVER_URL=wss://whiteboard.atakumi.net
 # Build the application
 RUN yarn build
 
+# Find and move the build output to a standard location
+RUN mkdir -p /build-output && \
+    find /opt/node_app -name "index.html" -type f -exec dirname {} \; | head -1 | xargs -I {} cp -r {}/* /build-output/ || \
+    find /opt/node_app -type d -name "build" -exec cp -r {}/* /build-output/ \; || \
+    find /opt/node_app -type d -name "dist" -exec cp -r {}/* /build-output/ \; || \
+    echo "Build output not found"
+
+# List what we found
+RUN ls -la /build-output/
+
 # Production stage
 FROM nginx:alpine
 
-# Copy built files (check both possible locations)
-COPY --from=builder /opt/node_app/dist /usr/share/nginx/html
-
-# If dist doesn't exist, let's also try build directory as fallback
-# COPY --from=builder /opt/node_app/build /usr/share/nginx/html
+# Copy built files from standardized location
+COPY --from=builder /build-output /usr/share/nginx/html
 
 # Create nginx config
 RUN echo 'server { \
