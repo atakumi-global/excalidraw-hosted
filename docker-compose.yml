@@ -13,6 +13,7 @@ services:
       - VITE_APP_STORAGE_BACKEND=http
       - VITE_APP_FIREBASE_CONFIG={}
       - VITE_APP_DISABLE_TRACKING=true
+      - REACT_APP_WS_SERVER_URL=wss://p0kcsck0wog4sgwssgksccwg.atakumi.net      
     depends_on:
       - excalidraw-storage
       - excalidraw-room
